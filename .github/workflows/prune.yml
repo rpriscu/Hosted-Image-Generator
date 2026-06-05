@@ -1,0 +1,58 @@
+name: Prune generated images
+
+# Deletes files under generated/ older than the retention window, so the bucket
+# repo doesn't grow without bound. Runs daily and on manual dispatch.
+on:
+  schedule:
+    - cron: "17 4 * * *" # daily at 04:17 UTC
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: "Delete generated/ files older than this many days"
+        required: false
+        default: "14"
+
+permissions:
+  contents: write
+
+# Configurable default retention (used by the scheduled run).
+env:
+  DEFAULT_RETENTION_DAYS: "14"
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete old generated images
+        run: |
+          set -euo pipefail
+          RETENTION="${{ github.event.inputs.retention_days || env.DEFAULT_RETENTION_DAYS }}"
+          echo "Pruning generated/ files older than ${RETENTION} days"
+
+          if [ ! -d generated ]; then
+            echo "No generated/ directory; nothing to prune."
+            exit 0
+          fi
+
+          # Never touch the POC placeholder or the directory README.
+          mapfile -t OLD < <(find generated \
+            -type f \
+            -mtime "+${RETENTION}" \
+            ! -path 'generated/poc/*' \
+            ! -name 'README.md')
+
+          if [ "${#OLD[@]}" -eq 0 ]; then
+            echo "Nothing to prune."
+            exit 0
+          fi
+
+          printf '%s\n' "${OLD[@]}"
+          git rm --quiet "${OLD[@]}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: prune generated images older than ${RETENTION} days"
+          git push
