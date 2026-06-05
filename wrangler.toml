@@ -23,4 +23,4 @@ new_sqlite_classes = ["ImageMcp"]
 # Create with: wrangler kv namespace create OAUTH_KV  → paste the id below.
 [[kv_namespaces]]
 binding = "OAUTH_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "c244e2ee81c84c3e8abe57438d112594"
