@@ -69,50 +69,72 @@ via `wrangler secret put MCP_AUTH_SECRET` if leaked.
 3. Scope now = `generate_image` + CLI + prune only. `edit_image` and Actions-trigger mode **deferred** (relay is structured to add them).
 4. Format = PNG default, allow jpeg/webp. Default model `nano-banana-2` @ `2K`.
 
-## Current state
+## Current state (updated 2026-06-05 — DEPLOYED & WORKING)
 
-- All code written, typechecked (`tsc` clean), and `wrangler deploy --dry-run`
-  bundles with all bindings. Committed + pushed to `main` (default branch) and
-  `claude/dazzling-ptolemy-Xsh9x`.
+- **DEPLOYED & LIVE on Cloudflare Workers:**
+  `https://hosted-image-generator.robert-priscu.workers.dev` — MCP endpoint `/mcp`.
+  - CF account: robert.priscu@gmail.com, account id `6a99fb2f9011a2b89abd6d1bb278ff68`.
+  - KV `OAUTH_KV` id `c244e2ee81c84c3e8abe57438d112594` (written into `wrangler.toml`, committed).
+  - All three secrets set via `wrangler secret put`: `FAL_KEY`, `GITHUB_TOKEN`, `MCP_AUTH_SECRET`.
+  - Deploy verified: `/mcp` → 401 without auth; `/authorize` → 200 (consent renders).
+- **Real fal generations verified end-to-end** (the local CLI, not the cloud build env):
+  - `nano-banana-2` 16:9 navy hero (commit `22c4801`).
+  - `nano-banana-pro` 1:1 2K solution-architecture diagram (commit `56b5e63`) — matched the prompt well.
+  - Both returned SHA-pinned raw URLs that fetch `HTTP/2 200` + `image/png` with no auth.
 - Repo is **public**; `main` is the **default branch**; `GITHUB_BRANCH=main` matches.
-- POC verified: the placeholder PNG returns `HTTP/2 200` + `content-type: image/png`
-  with no auth from `raw.githubusercontent.com` (SHA-pinned URL).
-- Structured-error path verified (fal error returned as a clean object).
-- NOT yet done: a real fal generation (the cloud build env blocks `fal.run`),
-  deployment, and connecting in Claude.
+- Structured-error path verified earlier (fal error returned as a clean object).
 
-## Next steps (run locally — this is why you're continuing on your machine)
+### BLOCKER on the MCP connector path (step D) — team account
 
-A. Get credentials: fal key (+ credits); GitHub fine-grained PAT scoped to
-   **Contents: Read+Write on this repo only**.
+The owner's Claude is on a **Team account where only the org admin can add custom
+connectors**, so step D (Settings → add connector) is not self-serve. Key facts
+established while diagnosing:
+- The MCP connector is what bridges the sandbox allowlist (its traffic is proxied
+  through Claude infra, NOT the sandbox network — so you can't just call the Worker
+  URL from inside a team chat; the sandbox can't reach `workers.dev`).
+- `MCP_AUTH_SECRET` gates the **per-user** `/authorize` consent screen. Tokens are
+  user-scoped, so an org-wide connector would still make **each member** complete
+  OAuth and enter the secret → there is **no "admin enters it once, shared by all"**.
+  Org-wide + secret-stays-private are in tension *in the current design*.
 
-B. Local smoke test (proves fal + commit + SHA URL before deploying):
-   ```bash
-   npm install
-   cp .env.example .env        # paste FAL_KEY + GITHUB_TOKEN
-   npm run gen -- "a wide minimal abstract navy tech hero background, 16:9"
-   curl -sI "<raw_url from output>"   # expect HTTP/2 200 + content-type image/png
-   ```
-   Success = new file under `generated/<date>/` in the repo + a 200 raw URL.
+### Current working mode: MANUAL BRIDGE (no connector)
 
-C. Deploy to Cloudflare (free account needed):
-   ```bash
-   npx wrangler kv namespace create OAUTH_KV   # paste id into wrangler.toml
-   npx wrangler secret put FAL_KEY
-   npx wrangler secret put GITHUB_TOKEN
-   npx wrangler secret put MCP_AUTH_SECRET     # your chosen password
-   npx wrangler deploy                          # → https://hosted-image-generator.<acct>.workers.dev
-   ```
+Owner runs the **local CLI** to generate, then pastes the resulting `raw_url` into
+the team chat; team-Claude curls it (`raw.githubusercontent.com` IS allowlisted) and
+embeds into the deck. The fal/GitHub creds never touch the team chat. This is the
+active workflow and needs no admin action.
 
-D. Connect in Claude: Settings → Connectors → Add custom connector → URL =
-   `https://…workers.dev/mcp` (leave client id/secret blank; it self-registers) →
-   Connect → enter `MCP_AUTH_SECRET` on the consent screen. (The chat agent can't
-   add its own connector — done once in Settings.)
+## Next steps
 
-E. Use it in chat: "Generate a 16:9 … and put it on slide 2."
+A. ✅ DONE — credentials obtained (fal key + GitHub fine-grained PAT, Contents R+W).
+   (Both were pasted into a chat session, so consider rotating: re-issue and
+   `wrangler secret put FAL_KEY` / `GITHUB_TOKEN` to update the Worker — no redeploy.)
+
+B. ✅ DONE — local smoke test passed (see Current state; two real generations verified).
+
+C. ✅ DONE — deployed to Cloudflare (URL + bindings + secrets above; `/mcp` 401-gated).
+
+D. ⛔ BLOCKED — custom connector requires an org admin on the owner's Team account.
+   To unblock, EITHER:
+   - Get the admin to enable member-added connectors OR add this one org-wide
+     (URL `https://hosted-image-generator.robert-priscu.workers.dev/mcp`, leave
+     client id/secret blank — it self-registers via dynamic client registration).
+     NOTE: org-wide still makes each member enter `MCP_AUTH_SECRET` (per-user OAuth).
+   - OR add it from a **personal** Pro/Max Claude account (self-serve, no admin).
+
+   If going org-wide and you DON'T want to hand the secret to every member, the
+   relay's access control must change: drop the consent-secret gate (auto-approve
+   the OAuth consent) and protect fal spend instead with a **fal dashboard spend
+   cap + an in-Worker daily request limit** (not yet implemented; `src/index.ts` is
+   where the consent screen lives, `src/relay.ts`/`src/mcp.ts` for a rate counter).
+
+E. ✅ ACTIVE WORKAROUND — manual bridge (see "Current working mode" above):
+   `npm run gen -- "<prompt>"` → copy `raw_url` → paste into team chat → team-Claude
+   fetches + embeds. No connector/admin needed.
 
 F. Later: wrap as a Skill that teaches Claude when to call `generate_image` and to
-   fetch + embed the `raw_url`. The tool contract is the stable surface.
+   fetch + embed the `raw_url`. The tool contract is the stable surface. (Only
+   useful once the connector path D is unblocked.)
 
 ## Commands
 
