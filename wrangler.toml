@@ -1,0 +1,26 @@
+name = "hosted-image-generator"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Non-secret config. Secrets (FAL_KEY, GITHUB_TOKEN, MCP_AUTH_SECRET) are set via
+# `wrangler secret put <NAME>` — never put them here.
+[vars]
+GITHUB_OWNER = "rpriscu"
+GITHUB_REPO = "Hosted-Image-Generator"
+GITHUB_BRANCH = "main"
+
+# McpAgent persists per-session state in a Durable Object (SQLite-backed, free tier).
+[[durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "ImageMcp"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ImageMcp"]
+
+# The OAuth provider stores client/grant/token records in KV.
+# Create with: wrangler kv namespace create OAUTH_KV  → paste the id below.
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

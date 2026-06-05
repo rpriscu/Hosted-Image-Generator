@@ -1,0 +1,25 @@
+{
+  "name": "hosted-image-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generate images with Google's nano banana models via fal.ai and relay them through GitHub so a network-restricted agent can fetch SHA-pinned raw URLs.",
+  "type": "module",
+  "scripts": {
+    "gen": "node --env-file=.env --experimental-strip-types scripts/gen.ts",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^0.0.5",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "agents": "^0.0.80",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "@types/node": "^22.19.19",
+    "typescript": "^5.5.0",
+    "wrangler": "^3.78.0"
+  }
+}

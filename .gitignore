@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# secrets — never commit real values
+.env
+.dev.vars
+*.local
+
+# build / tooling
+dist/
+.wrangler/
+.DS_Store
+*.log
