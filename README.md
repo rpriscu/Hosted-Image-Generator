@@ -70,13 +70,16 @@ Secrets live **only** as Wrangler secrets (or, for local CLI, in a git-ignored
 
 ## Prerequisites
 
-1. **The bucket repo must be PUBLIC.** This repo (`rpriscu/Hosted-Image-Generator`)
-   is currently private — flip it to public in
-   **Settings → General → Danger Zone → Change visibility**. A public repo lets the
-   agent fetch raw content with no credential in the sandbox.
-2. A fal.ai account with a key and a **commercial-use** tier if the output goes
+1. **The bucket repo is PUBLIC.** `rpriscu/Hosted-Image-Generator` is public, so
+   the agent can fetch raw content with no credential in the sandbox. (If you fork
+   or recreate it, ensure visibility is **public** under
+   **Settings → General → Danger Zone**.)
+2. A **`main` branch exists** and is where generated images are committed
+   (`GITHUB_BRANCH=main`). It only needs to *exist* for the relay to work;
+   optionally make it the repo's default branch under **Settings → Branches**.
+3. A fal.ai account with a key and a **commercial-use** tier if the output goes
    into client deliverables (confirm on your fal billing page).
-3. A GitHub fine-grained PAT scoped to **Contents: Read and write** on this repo
+4. A GitHub fine-grained PAT scoped to **Contents: Read and write** on this repo
    only.
 
 ---
